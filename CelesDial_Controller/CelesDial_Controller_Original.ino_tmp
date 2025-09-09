@@ -1,0 +1,229 @@
+/*
+Final year project for CelesDial controller. It includes the following hardware attached
+
+1. RTC clock module DS1302 (CLK=Pin4, DAT=Pin3, RST=Pin2)
+2. Push button (Input=Pin7). ACtive LOW.
+3. RGB LED strip with WS2812 (Data-in=Pin10)
+4. LCD Module (16 x 2) (SDA=A4, SCL=A5, I2C address=0x27)
+
+Student Name: Ho Chi Him Samuel
+Student Number: 230688185
+
+*/
+
+#include <Arduino.h>
+#include <Ds1302.h>
+//#include "uRTCLib.h"
+#include <Adafruit_NeoPixel.h>
+#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
+
+//Define hardware parameter constant
+#define BUTTON_PIN    7
+#define LED_DATA_PIN  10
+#define RTC_CLK       4
+#define RTC_DAT       3
+#define RTC_RST       2
+#define NeoPixel_PIN  10
+#define NUM_LED       48 //LED strip has 48 LEDs but we used them just certain number of LED at specific position
+#define BRIGHT_LEVEL  80
+#define HIGH          1
+#define LOW           0
+#define LCD_I2C       0x27
+#define STOP          Serial.println("Stop for debugging");while (true) {}
+
+
+//Common variables
+int button_val = 0;
+const static char* week_days[] = {"Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"};
+const static uint8_t led_pos[12] = {25, 22, 17, 13, 9, 4, 0, 47, 43, 38, 34, 29};
+const static uint32_t led_dim[4] = {0x0000cc, 0x000099, 0x000066, 0x000033};
+
+Ds1302 rtc(RTC_RST, RTC_CLK, RTC_DAT);
+Adafruit_NeoPixel rgb_led = Adafruit_NeoPixel(NUM_LED, NeoPixel_PIN, NEO_GRB + NEO_KHZ800);
+LiquidCrystal_I2C lcd(LCD_I2C, 16, 2);
+
+/*
+Clock arm: Hour = Red, Min = Green, Sec = Blue
+*/
+void clock_arm (uint8_t t_hour, uint8_t t_min, uint8_t t_sec) {
+
+  uint8_t t_5_hour = 0, t_5_sub_hour = 0, t_5_min = 0, t_5_sub_min = 0, t_5_sec = 0, t_5_sub_sec = 0;
+
+  t_hour *= 5; //Special handle of hour time.
+  t_5_hour = t_hour / 5; // This will not use at hour arm
+  t_5_sub_hour = t_hour % 5; //Thiw will not use at hour arm
+  t_5_min = t_min / 5;//As t_5_min is integer, so if t_min 0,1,2,3,4,5,6,7,8,9,10,11...., t_5_min will be 0,0,0,0,0,1,1,1,1,1,2,2...
+  t_5_sub_min = t_min % 5; // if t_min 0,1,2,3,4,5,6,7,8,9,10,11...., t_5_sub_min will be 0,1,2,3,4,0,1,2,3,4,0,1...
+  t_5_sec = t_sec / 5;
+  t_5_sub_sec = t_sec % 5;
+
+  //Hour Arm showing: GREEN
+  if (t_5_sub_hour == 0) {
+    rgb_led.setPixelColor(led_pos[t_5_hour], 0x00ff00 | rgb_led.getPixelColor(led_pos[t_5_hour]));
+  }
+  else { //This case never happen fpr hour arm, can be deleted this
+    if (t_5_hour == 11) { //Special case of 12 -> 1
+      rgb_led.setPixelColor(led_pos[11], led_dim[t_5_sub_hour - 1] <<8 |rgb_led.getPixelColor(led_pos[11])); 
+      rgb_led.setPixelColor(led_pos[0], led_dim[4 - t_5_sub_hour] <<8 | rgb_led.getPixelColor(led_pos[0])); 
+
+    }
+    else { //This will not used, can be deleted it.
+      rgb_led.setPixelColor(led_pos[t_5_hour], led_dim[t_5_sub_hour - 1] <<8 | rgb_led.getPixelColor(led_pos[t_5_hour])); 
+      rgb_led.setPixelColor(led_pos[t_5_hour + 1], led_dim[4 - t_5_sub_hour] <<8 | rgb_led.getPixelColor(led_pos[t_5_hour + 1])); 
+
+    }
+  }
+
+  //Min Arm showing: RED
+  if (t_5_sub_min == 0) {
+    rgb_led.setPixelColor(led_pos[t_5_min], 0xff0000 | rgb_led.getPixelColor(led_pos[t_5_min]));
+  }
+  else {
+    if (t_5_min == 11) {
+      rgb_led.setPixelColor(led_pos[11], led_dim[t_5_sub_min - 1] <<16 |rgb_led.getPixelColor(led_pos[11]));//Gradually dim out
+      rgb_led.setPixelColor(led_pos[0], led_dim[4 - t_5_sub_min] <<16 | rgb_led.getPixelColor(led_pos[0]));//Gradually light up
+
+    }
+    else {
+      rgb_led.setPixelColor(led_pos[t_5_min], led_dim[t_5_sub_min - 1] <<16 | rgb_led.getPixelColor(led_pos[t_5_min]));//Gradually dim out
+      rgb_led.setPixelColor(led_pos[t_5_min + 1], led_dim[4 - t_5_sub_min] <<16 | rgb_led.getPixelColor(led_pos[t_5_min + 1]));//Gradually light up
+
+    }
+  }
+
+  //Sec Arm showing: BLUE
+  if (t_5_sub_sec == 0) {
+    rgb_led.setPixelColor(led_pos[t_5_sec], 0x0000ff | rgb_led.getPixelColor(led_pos[t_5_sec]));
+  }
+  else {
+    if (t_5_sec == 11) {
+      rgb_led.setPixelColor(led_pos[11], led_dim[t_5_sub_sec - 1] | rgb_led.getPixelColor(led_pos[11]));
+      rgb_led.setPixelColor(led_pos[0], led_dim[4 - t_5_sub_sec] | rgb_led.getPixelColor(led_pos[0]));
+
+    }
+    else {
+      rgb_led.setPixelColor(led_pos[t_5_sec], led_dim[t_5_sub_sec - 1] | rgb_led.getPixelColor(led_pos[t_5_sec]));
+      rgb_led.setPixelColor(led_pos[t_5_sec + 1], led_dim[4 - t_5_sub_sec] | rgb_led.getPixelColor(led_pos[t_5_sec + 1]));
+    }
+  }
+
+
+  rgb_led.show();
+
+}
+
+
+void setup() {
+  static uint8_t last_second = 0;
+  uint8_t display_hour = 0;
+  bool power_on = true;
+  bool button_state = false;
+  bool is_set_clock = false; //If you want to set clock, set it to true, set dat/time value, then upload the program
+  bool led_on_off = false;
+
+  
+  Serial.begin(9600); //Serial port just for debug only.
+  pinMode(BUTTON_PIN, INPUT);
+  pinMode(LED_BUILTIN, OUTPUT);
+  rtc.init();
+  rgb_led.begin();
+  rgb_led.setBrightness(BRIGHT_LEVEL);
+
+  //Init LCD
+  lcd.init();
+  lcd.backlight();
+
+  //Clear all LED first
+  rgb_led.clear();
+  rgb_led.show();
+
+  //Set date and time here
+  if (is_set_clock) {
+    Ds1302::DateTime dt = {
+      .year=25,
+      .month = 6,
+      .day = 15,
+      .hour = 11,
+      .minute = 16,
+      .second = 0,
+      .dow = 4, //1=Mon, 7=Sun
+    };
+    rtc.setDateTime(&dt);
+  }
+
+  //LCD Testing
+  lcd.setCursor(1, 0);
+  lcd.print(" CelesDial...");
+
+  //User define loop. Will not use Arduino assinged loop()
+  while (true) {
+    
+    if (digitalRead(BUTTON_PIN) == LOW){
+      if (button_state == false) {
+        button_state = true;
+        power_on = !power_on;
+      }
+    }
+    else button_state = false;
+
+    Ds1302::DateTime now;
+    rtc.getDateTime (&now);
+
+    if (last_second !=now.second){
+      last_second = now.second;
+      if (now.hour >12)
+        display_hour = now.hour - 12;
+      else
+        display_hour = now.hour;
+
+      lcd.setCursor(1, 1);
+      Serial.print("Time and Date: ");
+      lcd.print("Time: ");
+      Serial.print("20");
+      Serial.print(now.year);    // 00-99
+      Serial.print('-');
+      if (now.month < 10) Serial.print('0');
+      Serial.print(now.month);   // 01-12
+      Serial.print('-');
+      if (now.day < 10) Serial.print('0');
+      Serial.print(now.day);     // 01-31
+      Serial.print(' ');
+      Serial.print(week_days[now.dow - 1]); // 1-7
+      Serial.print(' ');
+      if (now.hour < 10) {
+        Serial.print('0');
+        lcd.print('0');
+      }
+      Serial.print(now.hour);
+      lcd.print(display_hour);
+      lcd.print(':');    // 00-23
+      Serial.print(':');
+      if (now.minute < 10) {
+      Serial.print('0');
+      lcd.print('0');
+      }
+      Serial.print(now.minute);  // 00-59
+      lcd.print(now.minute);
+      Serial.print(':');
+      lcd.print(':');
+      if (now.second < 10) {
+        Serial.print('0');
+        lcd.print('0');
+      }
+      Serial.print(now.second);  // 00-59
+      lcd.print(now.second);
+      Serial.println();    
+      }
+      if (power_on) {
+      clock_arm(display_hour, now.minute, now.second);
+      led_on_off ?  digitalWrite(LED_BUILTIN, HIGH) : digitalWrite(LED_BUILTIN, LOW);
+      led_on_off = !led_on_off;
+      delay (100); //Time is ms
+      rgb_led.clear();
+      }
+      else
+         rgb_led.clear();                                                                                                                                                  
+    }
+   
+}

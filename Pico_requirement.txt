@@ -1,0 +1,24 @@
+---For setting up the raspberry pi pico link with USB, do the following steps:----
+
+- Press and hold the button on the Pico board, connect Pico to the USB port of the 
+  computer through the Micro USB cable, and then release the button. After connecting, 
+  the computer will automatically recognize a removable disk (RPI-RP2)
+  
+- Try to go to the raspberry pi micropython official website and download the "installation" file with extension uf2
+  like to following example: pico_micropython_20210121.uf2
+
+- Copy the pico_micropython_20210121.uf2 file in the python directory to the recognized 
+  removable disk (RPI-RP2)
+  
+--- Setting up Pico-w at Arduino IDE, need the following JSON link ---
+- Go to File -> Preference -> Additional Board Manager URL
+- https://github.com/earlephilhower/arduino-pico/releases/download/global/package_rp2040_index.json
+
+--- Setting up the customize library at Arduino IDE ---
+- Go to sketch -> Include Library -> Manage Libraries.
+
+--- Pico-w-go demo board configuration
+1. 16x2 LCD display panel: GP4=SDA, GP5=SCL
+2. LED x 4: GP10-13
+3. Button: GP6-9
+5. Sensor DHT11 GP

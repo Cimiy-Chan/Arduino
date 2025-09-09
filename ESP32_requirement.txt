@@ -1,0 +1,5 @@
+--- Setting up ---
+
+- For Arduino IDE 2.x, For relocating the lib path do the following:-
+- Suppose the library path is located at c:\Cimiy20181027\Home Projects\Arduino_IDE\libraries
+- File -> Preference -> c:\Cimiy20181027\Home Projects\Arduino_IDE
