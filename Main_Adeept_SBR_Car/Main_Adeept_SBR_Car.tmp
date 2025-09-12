@@ -1,0 +1,91 @@
+/**************************************************************
+Main program for Adeept Self Balance Robot (SBR) car 
+
+Modify and written by: Cimiy
+
+Main Hardware inside the SBR car:-
+1. Build in LED: Pin 13
+2. RGB LED x 2 controlled by PWM (brightness level) and connect to
+   CH0-5
+3. WS2812 LED strip. Total 10 pcs. 4x at Top, 3x at left
+   3x at right. 
+4. Buzzer at Pin 3
+5. UltraSonic at Pin 7, 8
+6. Tracking sensor port: Left:Pin 4, Mid: Pin 5, Right: PIn 6
+7. 
+**************************************************************/
+#include "rgb.cpp"
+#include "ultrasonic.cpp"
+#include "buzzer.cpp"
+#include "tracking_sensor.cpp"
+#include <Adafruit_NeoPixel.h>
+
+#define PIN_LED   0x0D
+#define LED_PIN    A3         // WS2812 connect to pin A3 .
+#define NUM_LEDS   10         // LED number.
+#define TRIG_PIN    7
+#define ECHO_PIN   8
+#define BUZZER_PIN     3
+#define RGB_PWM_FREQ 1500
+#define RGB_BRIGHTNESS 3
+#define TRACK_LEFT  4
+#define TRACK_MID  5
+#define TRACK_RIGHT  6
+
+
+
+
+//All the running codes will be in setup()
+void setup()
+{
+  Serial.begin(115200); //Use for serial monitor use
+  pinMode(PIN_LED, OUTPUT);
+
+  Adafruit_NeoPixel pixels(NUM_LEDS, LED_PIN, NEO_GRB + NEO_KHZ800);
+  pixels.begin();
+  pixels.setBrightness(5); // Set WS2812 LED brightness.
+
+
+  digitalWrite(PIN_LED, LOW);
+  delay(300);
+  digitalWrite(PIN_LED, HIGH); //On board LED is active low. HIGH is LED off
+  delay (300);
+
+  //Hardware objects instantiate
+  UltraSonic objUltraSonic(TRIG_PIN, ECHO_PIN);
+  Buzzer objBuzzer (BUZZER_PIN);
+  RgbLamp objRGB(RGB_PWM_FREQ, RGB_BRIGHTNESS); //Create RGB obj
+  TrackingSensor objTrackSensor(TRACK_LEFT, TRACK_MID, TRACK_RIGHT);
+
+
+  objRGB.color(1, 0,0,0);
+  objRGB.color(2, 0,0,0);
+  
+  objBuzzer.alert(4, 3);
+
+
+  while (true) { //'loop() code place here
+      for(int i=0;i<=NUM_LEDS;i++){
+        pixels.setPixelColor(i,pixels.Color(0,255,0)); // green
+        pixels.show();  // Send the command.
+        delay(100);
+        pixels.clear();
+        pixels.show();
+        delay(10); 
+      }
+    float distance = objUltraSonic.getDistance();
+    Serial.print("Distance: ");
+    Serial.print(distance);
+    Serial.println("cm");
+    int trackValue = objTrackSensor.trackValue();
+    Serial.print("Track value: ");
+    Serial.println(trackValue);
+
+  }
+}
+
+
+
+void loop() {
+  //This will not be used
+}

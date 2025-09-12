@@ -1,0 +1,51 @@
+Naming convention of C++
+
+Type 1: Classes and Class Attributes Names
+    class PerimeterRectangle
+    {
+        public:
+        int perimeter;
+        private:
+        int mLength;
+        int mWidth;
+    }
+
+    The private attribute name in class should be prepended with the character 'm'.
+
+Type 2: Functions and Function Argument Names
+    int getValue();
+    int SolveEquation();
+    int PerimeterRectangle(int lengthRectangle, int widthRectangle)
+
+    The first character of function/ method argument names should be lowercase.  Each word should also begin with a capital letter.
+
+Type 3: Variables
+    int total_cost;
+    int length;
+    int *pName;
+    static int sCount;
+
+    The variable name should begin with an alphabet.
+    Digits may be used but only after the alphabet.
+    No special symbols can be used in variable names except for the underscore('_').
+    No keywords can be used for variable names.
+    Pointer variables should be prepended with 'p' and place the asterisk '*' close to the variable name instead of the pointer type.
+    Static variables should be prepended with 's'.
+
+Type 4: Constant
+    const double TWO_PI = 6.28318531; 
+    
+    The global constants should be all capital letters separated with '_'.
+
+Type 5: File Naming;
+    helloworld.c       // Valid
+    hello_world.cpp    // Valid
+    hello-world.cpp   // Valid
+    hel-lo_world.cpp  // Valid
+    hello* world.cpp  // Not Valid
+    iostream.cpp // Not Valid
+    hello123@world.cpp// Not Valid
+
+    No special character is allowed in the file name except for underscore ('_') and dash ('-').
+    The file name should end with the .c extension in the end or should end with the .cpp extension.
+    Do not use filenames that already exist in /user/include. or any predefined header file name.
