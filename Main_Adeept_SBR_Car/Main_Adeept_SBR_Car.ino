@@ -39,24 +39,25 @@ double Setpoints, Outputs = 0;                           //Speed DIP setpoint, i
 double angleoutput;
 
 //Vertical loop PID
-double kp = 40, ki = 0, kd = -13;  // 0.6x0.6*0.6.. ki is not used
+double kp = -550.0, ki = 0, kd = -1.9954;  // 0.6x0.6*0.6.. ki is not used
 //double kp = 19.44, ki = 0, kd = 1.39968;   // 0.6x0.6*0.6..
 //double kp = 11.664, ki = 0, kd = 1.39968;   // 0.6x0.6*0.6..
 
-//Velocity loop PID
-double kp_speed = 27.5, ki_speed = 0.1425, kd_speed = 0.00;
+//Velocity loop PID (I=P/200)
+double kp_speed = -100.0, ki_speed = -0.5, kd_speed = 0.0;
 //double kp_speed = 22, ki_speed = 0.11, kd_speed = 0.00;
 //double kp_speed = 23.5, ki_speed = 0.1175, kd_speed = 0.00; 
 //double kp_speed = 22.75, ki_speed = 0.11375, kd_speed = 0.00;
 
 //Steering ring PID
-double kp_turn = -55, ki_turn = 0, kd_turn = -0.60; 
+double kp_turn = 0, ki_turn = 0, kd_turn = 0; //+ve is better
 //double kp_turn = -45, ki_turn = 0, kd_turn = -0.6;  
 //double kp_turn = -55, ki_turn = 0, kd_turn = -0.6;  
 
 
 //Steering PID parameters
 double setp0 =1, dpwm = 0, dl = 0; //Angle balance point, PWM difference, dead zone, PWM1, PWM2
+//double setp0 =1, dpwm = 0, dl = 0; //Angle balance point, PWM difference, dead zone, PWM1, PWM2
 float value;
  
 /********************angle data*********************/
@@ -64,14 +65,17 @@ float Q;
 float Angle_ax; //The angle of inclination calculated from the acceleration
 float Angle_ay;
 float K1 = 0.05; // The weight of the accelerometer
+//float K1 = 0.05; // The weight of the accelerometer
 //float angle0 =  -5.95 ; //Mechanical balance angle 5.85
-float angle0 =  -6.05 ;
+float angle0 =  5.0;
 int slong;
 
 /***************Kalman_Filter*********************/
 float Q_angle = 0.001, Q_gyro = 0.005; //Angle data confidence, angular velocity data confidence
+//float Q_angle = 0.001, Q_gyro = 0.005; //Angle data confidence, angular velocity data confidence
 float R_angle = 0.5 , C_0 = 1;
 float timeChange = 5; //Filter method sampling time interval milliseconds
+//float dt = timeChange * 0.001; //Note: The value of dt is the filter sampling time
 float dt = timeChange * 0.001; //Note: The value of dt is the filter sampling time
 
 /******************* speed count ************/
@@ -101,7 +105,7 @@ int spinr = 0;//Right turn mark
 int distance;
 int detTime=0; 
 
-/*Pulse calculation 脉冲计算*/
+/*Pulse calculation*/
 void countpluse(){
   lz = count_left;
   rz = count_right;
@@ -135,6 +139,7 @@ void countpluse(){
 /*Angle PD*/
 void angleout(){
   balancecar.angleoutput = kp * (kalmanfilter.angle + angle0) + kd * kalmanfilter.Gyro_x;//PD angle loop control
+  Serial.println(balancecar.angleoutput);
 }
 
 /*Interrupt timing 5ms timer interrupt*/
@@ -142,6 +147,7 @@ void inter(){
   sei();                                        
   countpluse();                                     //Pulse superposition of sub - functions
   mpu.getMotion6(&ax, &ay, &az, &gx, &gy, &gz);     //IIC gets MPU6050 six axis data ax ay az gx gy gz
+  //Serial.println(ax);
   kalmanfilter.angleTest(ax, ay, az, gx, gy, gz, dt, Q_angle, Q_gyro,R_angle,C_0,K1);  //Get angle and Kaman filter
   angleout();                                       //Angle loop PD control
   speedcc++;
@@ -152,9 +158,9 @@ void inter(){
   }
     // Steering Ring Adjustment
   turncount++;
-  Serial.println(turncount);
+  //Serial.println(turncount);
   if (turncount > 2){                                //10ms into the rotation control
-      Serial.println("turncount");
+      //Serial.println("turncount");
       turnoutput = balancecar.turnSpin(turnl,turnr,spinl,spinr,kp_turn,kd_turn,kalmanfilter.Gyro_z);  //Rotary subfunction
       turncount = 0;
   }
@@ -162,6 +168,16 @@ void inter(){
   balancecar.pwma(Outputs,turnoutput,kalmanfilter.angle,kalmanfilter.angle6,turnl,turnr,spinl,spinr,front,back,kalmanfilter.accelz);//car total PWM output   
 
 }
+
+/*Left speed chart*/
+void Code_left() {
+  count_left ++;
+} 
+/*Right speed chart count*/
+void Code_right() {
+  count_right ++;
+} 
+
 
 void setup() {
 
@@ -173,7 +189,7 @@ void setup() {
   //Stop Moter first
   Motor(1, 0, 0);
   Motor(2, 0, 0);
-  delay (2000);
+  delay (500);
 
   pinMode(PIN_MOTOR_M1_isr, INPUT_PULLUP);
   pinMode(PIN_MOTOR_M2_isr, INPUT_PULLUP);
@@ -189,22 +205,23 @@ void setup() {
   mpu.initialize();    
   delay(2);
 
-  //Singal to alert user to run the car
+  //LED signal to alert user to run the car
   
-  for (int i=0; i < 9; i++)
+  for (int i=0; i < 2; i++)
   {
     objRGB.color(1, 0, 255, 0);
     objRGB.color(2, 0, 255, 0);
-    delay (200);
+    delay (500);
     objRGB.color(1, 0, 0, 0);
     objRGB.color(2, 0, 0, 0);
-    delay (800);
+    delay (500);
   } 
   
 
  //5ms timer interrupt setting. Use timer2. Note: Using timer2 will affect the PWM output of pin3 and pin11.
  //Because the PWM is used to control the duty cycle timer, so when using the timer should pay attention to 
  //see the corresponding timer pin port.
+  //MsTimer2::set(5, inter);
   MsTimer2::set(5, inter);
   MsTimer2::start();
   
@@ -217,11 +234,3 @@ void loop() {
 
 }
 
-/*Left speed chart*/
-void Code_left() {
-  count_left ++;
-} 
-/*Right speed chart count*/
-void Code_right() {
-  count_right ++;
-} 

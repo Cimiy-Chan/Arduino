@@ -87,7 +87,7 @@ void stepper_motor_move(uint8_t speed, uint16_t step, bool direction) {
 }
 
 /*
-- Button status routine which can detect key is short press and long press
+- Button status routine which can detect key is either short press or long press
 - duration_1 (ms) = range in 10ms to 500ms. 10ms per step. Duration for short press (typical value: 20ms)
 - duration_2 (ms) = range in 110ms to 1500ms. 10ms per step. Duration for long press (typical value: 1000ms)
 - duration_1 < duration 2
